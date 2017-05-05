@@ -8,7 +8,7 @@ class Sibling extends DynamicObject {
         return Object.assign({}, super.netScheme);
     }
 
-    constructor(id, position) {
+    constructor(id, gameEngine, position) {
         super(id, position);
         this.class = Sibling;
     };

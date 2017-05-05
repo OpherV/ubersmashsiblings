@@ -17,11 +17,9 @@ const io = socketIO(requestHandler);
 // Game Server
 const ServerEngine = require(path.join(__dirname, 'src/server/UmsServerEngine.js'));
 const GameEngine = require(path.join(__dirname, 'src/common/UmsGameEngine.js'));
-const SimplePhysicsEngine = require('lance-gg').physics.SimplePhysicsEngine;
 
 // Game Instances
-const physicsEngine = new SimplePhysicsEngine();
-const gameEngine = new GameEngine({ physicsEngine, traceLevel: 1 });
+const gameEngine = new GameEngine({ traceLevel: 1 });
 const serverEngine = new ServerEngine(io, gameEngine, { debug: {}, updateRate: 6 });
 
 // start the game

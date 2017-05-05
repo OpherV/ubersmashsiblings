@@ -1,26 +1,91 @@
 'use strict';
 
-// initialize Phaser the 'browserify' way
-// https://www.npmjs.com/package/phaser#browserify
-window.PIXI = require('phaser/build/custom/pixi');
-window.p2 = require('phaser/build/custom/p2');
-window.Phaser = require('phaser/build/custom/phaser-split');
-
+const PIXI = require('pixi.js');
 const Renderer = require('lance-gg').render.Renderer;
 const Sibling = require('../common/Sibling');
 
+class UmsRenderer extends Renderer {
 
-var facing = 'left';
-var jumpTimer = 0;
-var cursors;
-var jumpButton;
-
-class MyRenderer extends Renderer {
+    get ASSETPATHS(){
+        return {
+            bg1: 'resources/images/background2.png',
+            dude: 'resources/images/dude.png'
+        };
+    }
 
     constructor(gameEngine, clientEngine) {
         super(gameEngine, clientEngine);
-        this.initPhaser();
+        this.sprites = {};
+
+        // asset prefix
+        this.assetPathPrefix = this.gameEngine.options.assetPathPrefix?this.gameEngine.options.assetPathPrefix:'';
     }
+
+    init() {
+        this.viewportWidth = window.innerWidth;
+        this.viewportHeight = window.innerHeight;
+
+        this.stage = new PIXI.Container();
+        this.layer1 = new PIXI.Container();
+        this.layer2 = new PIXI.Container();
+
+        this.stage.addChild(this.layer1, this.layer2);
+
+        if (document.readyState === 'complete' || document.readyState === 'loaded' || document.readyState === 'interactive') {
+            this.onDOMLoaded();
+        } else {
+            document.addEventListener('DOMContentLoaded', ()=>{
+                this.onDOMLoaded();
+            });
+        }
+
+        return new Promise((resolve, reject)=>{
+
+            // load PIXI assets
+            PIXI.loader.add(Object.keys(this.ASSETPATHS).map((x)=>{
+                return{
+                    name: x,
+                    url: this.assetPathPrefix + this.ASSETPATHS[x]
+                };
+            }))
+                .load(() => {
+                    this.isReady = true;
+                    this.setupStage();
+                    this.gameEngine.emit('renderer.ready');
+
+
+                    resolve();
+                });
+        });
+    }
+
+    onDOMLoaded(){
+        this.renderer = PIXI.autoDetectRenderer(this.viewportWidth, this.viewportHeight);
+        document.body.querySelector('.pixiContainer').appendChild(this.renderer.view);
+    }
+
+    setupStage() {
+        window.addEventListener('resize', ()=>{ this.setRendererSize(); });
+        
+        // background
+        this.bg1 = new PIXI.extras.TilingSprite(PIXI.loader.resources.bg1.texture,
+            this.viewportWidth, this.viewportHeight);
+
+        this.bg1.tilePosition.y -= PIXI.loader.resources.bg1.texture.height;
+
+        this.layer1.addChild(this.bg1);
+    }
+
+    setRendererSize() {
+        this.viewportWidth = window.innerWidth;
+        this.viewportHeight = window.innerHeight;
+
+        this.bg1.width = this.viewportWidth;
+        this.bg1.height = this.viewportHeight;
+
+        this.renderer.resize(this.viewportWidth, this.viewportHeight);
+    }
+
 
     draw() {
         super.draw();
@@ -41,88 +106,41 @@ class MyRenderer extends Renderer {
             }
 
         }
+
+        // Render the stage
+        this.renderer.render(this.stage);
     }
 
-    phaserPreload(){
-        this.phaserGame.load.spritesheet('dude', 'resources/images/dude.png', 32, 48);
-        this.phaserGame.load.image('background', 'resources/images/background2.png');
-    }
+    addObject(objData, options) {
+        let sprite;
 
-    phaserCreate(){
-        this.bg = this.phaserGame.add.tileSprite(0, 0, 800, 600, 'background');
-        // player.animations.add('left', [0, 1, 2, 3], 10, true);
-        // player.animations.add('turn', [4], 20, true);
-        // player.animations.add('right', [5, 6, 7, 8], 10, true);
+        if (objData.class == Sibling) {
+            // sprite.width = 32;
+            // sprite.height = 48;
+            let texture = PIXI.loader.resources.dude.texture;
+            texture.frame = new PIXI.Rectangle(0,0,32,48);
 
-        cursors = game.input.keyboard.createCursorKeys();
-        jumpButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-    }
+            sprite = new PIXI.Sprite(texture);
+            this.sprites[objData.id] = sprite;
 
-    phaserUpdate(){
-        player.body.velocity.x = 0;
-
-        if (cursors.left.isDown)
-        {
-            player.body.velocity.x = -150;
-
-            if (facing != 'left')
-            {
-                player.animations.play('left');
-                facing = 'left';
-            }
-        }
-        else if (cursors.right.isDown)
-        {
-            player.body.velocity.x = 150;
-
-            if (facing != 'right')
-            {
-                player.animations.play('right');
-                facing = 'right';
-            }
-        }
-        else
-        {
-            if (facing != 'idle')
-            {
-                player.animations.stop();
-
-                if (facing == 'left')
-                {
-                    player.frame = 0;
-                }
-                else
-                {
-                    player.frame = 5;
-                }
-
-                facing = 'idle';
-            }
+            console.log(objData.position);
+            sprite.anchor.set(0.5, 0.5);
         }
 
-        if (jumpButton.isDown && player.body.onFloor() && game.time.now > jumpTimer)
-        {
-            player.body.velocity.y = -500;
-            jumpTimer = game.time.now + 750;
-        }
+        sprite.position.set(objData.position.x, objData.position.y);
+        this.layer2.addChild(sprite);
+
+        Object.assign(sprite, options);
+        return sprite;
     }
 
-    phaserRender(){
+    removeObject(obj) {
+        let sprite = this.sprites[obj.id];
 
+        this.sprites[obj.id].destroy();
+        delete this.sprites[obj.id];
     }
-
-
-    initPhaser() {
-        this.phaserGame = new Phaser.Game(800, 600, Phaser.CANVAS, 'phaser-example',
-            {
-                preload: this.phaserPreload,
-                create: this.phaserCreate,
-                update: this.phaserUpdate
-            });
-
-
-    }
-
+    
 }
 
-module.exports = MyRenderer;
+module.exports = UmsRenderer;

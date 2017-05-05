@@ -1,13 +1,33 @@
 'use strict';
 
+const SimplePhysicsEngine = require('lance-gg').physics.SimplePhysicsEngine;
 const GameEngine = require('lance-gg').GameEngine;
 const TwoVector = require('lance-gg').serialize.TwoVector;
 
+const Sibling = require('./Sibling');
 
 class MyGameEngine extends GameEngine {
 
     constructor(options) {
         super(options);
+        this.physicsEngine = new SimplePhysicsEngine();
+        this.physicsEngine.init({
+            gameEngine: this,
+            gravity: new TwoVector(0, 0.3)
+        });
+
+        this.on('postStep', () => {
+            this.world.forEachObject((id, obj) => {
+
+                if (obj.class == Sibling){
+                    if (obj.y >= 200) {
+                        obj.affectedByGravity = false;
+                        obj.velocity.y = 0;
+                    }
+                }
+
+            });
+        })
     }
 
     start() {
@@ -18,10 +38,6 @@ class MyGameEngine extends GameEngine {
         //     width: 400,
         //     height: 400
         // };
-        this.phaserGame = new Phaser.Game(800, 600, Phaser.HEADLESS, '', { create: this.phaserCreate.bind(this), update: this.phaserUpdate.bind(this) });
-
-        //tie the Phaser step the the Lance step
-        this.on('postStep', ()=>{ this.phaserGame.step(); });
     }
 
     makeSibling(playerId) {
@@ -31,28 +47,10 @@ class MyGameEngine extends GameEngine {
         let sibling= new Sibling(++this.world.idCount, this, position);
         sibling.playerId = playerId;
 
+
         this.addObjectToWorld(sibling);
         
         return sibling;
-    }
-
-    phaserUpdate(){
-        // console.log(this.phaserGame.stepCount);
-    }
-
-    phaserCreate(){
-        this.phaserGame.enableStep();
-        this.phaserGame.physics.startSystem(Phaser.Physics.ARCADE);
-
-        this.phaserGame.physics.arcade.gravity.y = 300;
-
-        this.player = this.phaserGame.add.sprite(32, 320, 'dude');
-        this.phaserGame.physics.enable(this.player, Phaser.Physics.ARCADE);
-
-        this.player.body.collideWorldBounds = true;
-        this.player.body.gravity.y = 1000;
-        this.player.body.maxVelocity.y = 500;
-        this.player.body.setSize(20, 32, 5, 16);
     }
 
     processInput(inputData, playerId) {

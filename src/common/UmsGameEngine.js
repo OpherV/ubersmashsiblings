@@ -6,6 +6,9 @@ const TwoVector = require('lance-gg').serialize.TwoVector;
 
 const Sibling = require('./Sibling');
 
+const RUNSPEED = new TwoVector(0.5, 0);
+const JUMPSPEED = new TwoVector(0, -9);
+
 class MyGameEngine extends GameEngine {
 
     constructor(options) {
@@ -13,7 +16,7 @@ class MyGameEngine extends GameEngine {
         this.physicsEngine = new SimplePhysicsEngine();
         this.physicsEngine.init({
             gameEngine: this,
-            gravity: new TwoVector(0, 0.3)
+            gravity: new TwoVector(0, 0.5)
         });
 
         this.on('postStep', () => {
@@ -23,6 +26,9 @@ class MyGameEngine extends GameEngine {
                     if (obj.y >= 200) {
                         obj.affectedByGravity = false;
                         obj.velocity.y = 0;
+                    }
+                    else{
+                        obj.affectedByGravity = true;
                     }
                 }
 
@@ -57,21 +63,21 @@ class MyGameEngine extends GameEngine {
 
         super.processInput(inputData, playerId);
 
+        console.log('got input', inputData);
+
         // get the player's primary object
-        let player = this.world.getPlayerObject(playerId);
-        if (player) {
+        let playerSibling = this.world.getPlayerObject(playerId);
+        if (playerSibling) {
             console.log(`player ${playerId} pressed ${inputData.input}`);
+
             if (inputData.input === 'up') {
-                player.isMovingUp = true;
-            } else if (inputData.input === 'down') {
-                player.isMovingDown = true;
+                playerSibling.velocity.add(JUMPSPEED)
             } else if (inputData.input === 'right') {
-                player.isRotatingRight = true;
+                playerSibling.velocity.add(RUNSPEED);
             } else if (inputData.input === 'left') {
-                player.isRotatingLeft = true;
+                playerSibling.velocity.subtract(RUNSPEED);
             } else if (inputData.input === 'space') {
-                this.fire(player, inputData.messageIndex);
-                this.emit('fire');
+
             }
         }
     }

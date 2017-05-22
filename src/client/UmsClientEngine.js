@@ -1,4 +1,5 @@
 const ClientEngine = require('lance-gg').ClientEngine;
+const KeyboardControls = require('lance-gg').controls.Keyboard;
 const MyRenderer = require('../client/UmsRenderer');
 
 class MyClientEngine extends ClientEngine {
@@ -7,31 +8,12 @@ class MyClientEngine extends ClientEngine {
         super(gameEngine, options, MyRenderer);
 
         this.serializer.registerClass(require('../common/Sibling'));
-        this.gameEngine.on('client__preStep', this.preStep.bind(this));
-    }
 
-    // our pre-step is to process all inputs
-    preStep() {
-
-        // if (this.pressedKeys.up) {
-        //     this.sendInput('up', { movement: true });
-        // }
-        //
-        // if (this.pressedKeys.down) {
-        //     this.sendInput('down', { movement: true });
-        // }
-        //
-        // if (this.pressedKeys.left) {
-        //     this.sendInput('left', { movement: true });
-        // }
-        //
-        // if (this.pressedKeys.right) {
-        //     this.sendInput('right', { movement: true });
-        // }
-        //
-        // if (this.pressedKeys.space) {
-        //     this.sendInput('space', { movement: true });
-        // }
+        this.controls = new KeyboardControls(this);
+        this.controls.bindKey('left', 'left', { repeat: true });
+        this.controls.bindKey('right', 'right', { repeat: true });
+        this.controls.bindKey('up', 'up' );
+        
     }
 
 }
